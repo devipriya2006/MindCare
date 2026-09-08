@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Daily Check-in — MindCare{% endblock %}
+{% block content %}
+<section class="checkin-card">
+  <h2>How are you feeling today?</h2>
+  <form method="POST" action="{{ url_for('checkin') }}">
+    <div class="mood-selector">
+      <label class="mood-option">
+        <input type="radio" name="mood" value="great" required>
+        <span class="mood-emoji">😊</span><span>Great</span>
+      </label>
+      <label class="mood-option">
+        <input type="radio" name="mood" value="good">
+        <span class="mood-emoji">🙂</span><span>Good</span>
+      </label>
+      <label class="mood-option">
+        <input type="radio" name="mood" value="okay">
+        <span class="mood-emoji">😐</span><span>Okay</span>
+      </label>
+      <label class="mood-option">
+        <input type="radio" name="mood" value="low">
+        <span class="mood-emoji">😔</span><span>Low</span>
+      </label>
+      <label class="mood-option">
+        <input type="radio" name="mood" value="angry">
+        <span class="mood-emoji">😡</span><span>Angry</span>
+      </label>
+      <label class="mood-option">
+        <input type="radio" name="mood" value="stressed">
+        <span class="mood-emoji">😰</span><span>Stressed</span>
+      </label>
+    </div>
+
+    <label for="journal_text">Tell us more (optional)</label>
+    <textarea id="journal_text" name="journal_text" rows="5"
+      placeholder="What's on your mind today?"></textarea>
+
+    <button type="submit" class="btn btn-primary">Analyze</button>
+  </form>
+</section>
+{% endblock %}

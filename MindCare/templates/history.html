@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Mood History — MindCare{% endblock %}
+{% block content %}
+<section class="history">
+  <h2>Journal History</h2>
+
+  {% if not entries %}
+    <p class="empty-state">
+      No entries yet. <a href="{{ url_for('checkin') }}">Log your first mood check-in</a>.
+    </p>
+  {% else %}
+    {% for e in entries %}
+    <div class="history-entry {% if e.distress_flag %}history-entry-distress{% endif %}">
+      <div class="history-entry-header">
+        <span class="history-date">{{ e.created_at.strftime('%B %d, %Y — %I:%M %p') }}</span>
+        <span class="history-mood">{{ e.mood|capitalize }}</span>
+      </div>
+      {% if e.journal_text %}
+        <p class="history-text">"{{ e.journal_text }}"</p>
+      {% endif %}
+      <p class="history-signal"><strong>Analysis:</strong> {{ e.emotion_signal }}</p>
+    </div>
+    {% endfor %}
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Your Check-in Result — MindCare{% endblock %}
+{% block content %}
+<section class="result-card {% if entry.distress_flag %}result-distress{% endif %}">
+  <h2>Check-in Recorded</h2>
+
+  <p class="result-mood">Your Selected Mood: <strong>{{ entry.mood|capitalize }}</strong></p>
+
+  {% if entry.journal_text %}
+  <div class="result-block">
+    <h3>Text Analysis</h3>
+    <p><strong>Possible Emotional Signal:</strong> {{ entry.emotion_signal }}</p>
+    <p><strong>General Sentiment:</strong> {{ entry.sentiment }}</p>
+  </div>
+  {% endif %}
+
+  <div class="result-block">
+    <h3>Support Suggestion</h3>
+    <p>{{ entry.support_message }}</p>
+  </div>
+
+  {% if entry.distress_flag %}
+  <div class="safety-banner">
+    <h3>🆘 You don't have to handle this alone</h3>
+    <p>
+      If you may be in immediate danger, please contact your local
+      emergency number right away. You can also reach out to a trusted
+      person, or visit our <a href="{{ url_for('support') }}">Support &amp;
+      Resources</a> page for more options.
+    </p>
+    <p class="fine-print">
+      This message was generated automatically based on general language
+      patterns and can be mistaken. It is not a diagnosis or emergency
+      response.
+    </p>
+  </div>
+  {% endif %}
+
+  <p class="disclaimer">
+    This analysis reflects general language patterns only and is not a
+    medical or psychological diagnosis.
+  </p>
+
+  <div class="result-actions">
+    <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Go to Dashboard</a>
+    <a class="btn btn-primary" href="{{ url_for('checkin') }}">New Check-in</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — MindCare{% endblock %}
+{% block content %}
+<section class="dashboard">
+  <h2>Hello, {{ current_user.name }} 👋</h2>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <span class="stat-value">{{ total_entries }}</span>
+      <span class="stat-label">Total check-ins</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ week_entries }}</span>
+      <span class="stat-label">Check-ins this week</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">
+        {% if latest %}{{ latest.mood|capitalize }}{% else %}—{% endif %}
+      </span>
+      <span class="stat-label">Latest mood</span>
+    </div>
+  </div>
+
+  {% if total_entries == 0 %}
+    <p class="empty-state">
+      You haven't logged a mood yet. <a href="{{ url_for('checkin') }}">Start your first check-in</a>.
+    </p>
+  {% else %}
+    <div class="chart-row">
+      <div class="chart-card">
+        <h3>Mood Trend</h3>
+        <canvas id="trendChart" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Sentiment Distribution</h3>
+        <canvas id="distributionChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="recent-entries">
+      <h3>Recent Check-ins</h3>
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Mood</th><th>Emotional Signal</th></tr>
+        </thead>
+        <tbody>
+          {% for e in recent_entries %}
+          <tr>
+            <td>{{ e.created_at.strftime('%b %d, %Y') }}</td>
+            <td>{{ e.mood|capitalize }}</td>
+            <td>{{ e.emotion_signal }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <a href="{{ url_for('history') }}">View full history →</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if total_entries > 0 %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endif %}
+{% endblock %}
