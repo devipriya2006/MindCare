@@ -3,11 +3,14 @@ services:
     name: mindcare
     runtime: python
     plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app"
+    rootDir: MindCare
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+
     envVars:
       - key: SECRET_KEY
         generateValue: true
+
       - key: PYTHON_VERSION
         value: 3.11.9
-
