@@ -1,111 +1,140 @@
 # MindCare
 
-A non-diagnostic mental wellness check-in and mood-tracking web app built
-with Flask. Users log a daily mood, optionally write a journal entry, and
-receive general, supportive (never diagnostic) feedback based on language
-patterns. Mood history is visualized on a dashboard.
+## Mental Wellness Support & Mood Tracking Platform
 
-**This app does not diagnose mental health conditions and is not a
-substitute for professional care or emergency services.**
+MindCare is a Flask-based wellness-support and mood-tracking platform.
+Users can create an account, record moods, write journal entries, receive
+sentiment/emotion-related feedback, and view their mood history.
+
+> **Disclaimer:** MindCare is a wellness-support application, not a medical
+> diagnostic system. Its analysis provides general sentiment and
+> emotion-related signals from user-provided text.
 
 ## Features
 
-- Register / login (hashed passwords, Flask-Login sessions)
-- Daily mood check-in with optional journal text
-- Rule-based + VADER sentiment analysis, labeled as "language patterns"
-  (e.g. "Stress-related language"), never as a diagnosis
-- Basic distress-phrase detection that routes to a safety/support message
-- Mood history log
-- Dashboard with a mood trend line chart and sentiment distribution chart
-  (Chart.js)
-- Support & Resources page with general crisis-support guidance
+- User registration and login
+- Password hashing
+- Mood check-ins
+- Journal entries
+- Text sentiment analysis
+- Emotion-related signals
+- Supportive feedback
+- Distress flagging
+- Personal mood history
+- Dashboard and trend data
+- PostgreSQL persistence
+- SQLite fallback for local development
+- Gunicorn production server
+- Render deployment support
 
-## Project structure
+## Technology Stack
 
-```
+**Backend:** Python, Flask, Flask-SQLAlchemy, Flask-Login, VADER Sentiment, Gunicorn
+
+**Database:** PostgreSQL / Neon, with SQLite fallback locally
+
+**Frontend:** HTML, CSS, JavaScript
+
+**Deployment:** Render
+
+## Project Structure
+
+```text
 MindCare/
-├── app.py                # Flask app, routes, models
-├── analysis.py            # Sentiment / emotion-signal logic
+├── app.py
+├── analysis.py
 ├── requirements.txt
-├── render.yaml             # Render Blueprint (one-click deploy)
-├── Procfile                # Fallback start command
-├── templates/               # Jinja2 HTML templates
-├── static/
-│   ├── css/style.css
-│   └── js/dashboard.js
-└── database/                # SQLite file lives here locally
+├── render.yaml
+├── Procfile
+├── README.md
+├── DEPLOYMENT_CHECKLIST.md
+├── .gitignore
+├── .env.example
+├── templates/
+└── static/
 ```
 
-## Run locally
+## Application Flow
+
+```text
+User
+  ↓
+Registration / Login
+  ↓
+Mood Check-in + Journal
+  ↓
+Text Analysis
+  ↓
+Sentiment + Emotion-related Signal
+  ↓
+Supportive Feedback
+  ↓
+PostgreSQL
+  ↓
+Dashboard + History
+```
+
+## Local Setup
 
 ```bash
+git clone <your-github-repository-url>
+cd MindCare/MindCare
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+```
+
+Windows:
+```bash
+venv\Scripts\activate
+```
+
+Install dependencies:
+```bash
 pip install -r requirements.txt
+```
+
+Copy `.env.example` to `.env` and add local values if required.
+
+Run:
+```bash
 python app.py
 ```
 
-Visit http://localhost:5000
+Open `http://127.0.0.1:5000`.
 
-By default this uses a local SQLite database at `database/mindcare.db`
-(created automatically on first run).
+If `DATABASE_URL` is not set, the application uses its SQLite fallback.
 
-## Deploy to Render
+## Production Deployment
 
-### Option A — One-click Blueprint (recommended)
+Render configuration:
 
-1. Push this project to a GitHub (or GitLab) repository.
-2. In the Render dashboard, click **New > Blueprint**, and point it at
-   your repo. Render will read `render.yaml` and create the web service
-   automatically, including:
-   - Build command: `pip install -r requirements.txt`
-   - Start command: `gunicorn app:app`
-   - A generated `SECRET_KEY` environment variable
-   - A small persistent disk mounted at `database/` so your SQLite file
-     survives deploys/restarts (Render's free web services otherwise use
-     an ephemeral filesystem)
-3. Click **Apply**. Render will build and deploy the app; the first
-   request will auto-create the database tables.
+- Root directory: `MindCare`
+- Build command: `pip install -r requirements.txt`
+- Start command: `gunicorn app:app`
 
-### Option B — Manual web service
+Required Render environment variables:
 
-1. Push the project to GitHub.
-2. In Render, click **New > Web Service** and connect the repo.
-3. Set:
-   - **Runtime**: Python 3
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `gunicorn app:app`
-4. Add an environment variable `SECRET_KEY` with any random string.
-5. (Recommended) Add a **Disk** mounted at `database/` so SQLite data
-   persists across deploys — otherwise your data resets each deploy.
-6. Deploy.
+```text
+SECRET_KEY
+DATABASE_URL
+```
 
-### Using Postgres instead of SQLite (optional, more robust)
+Never commit real secrets or database credentials.
 
-Render's free disks are limited and SQLite doesn't scale well with
-multiple instances. For a more production-ready setup:
+## Database
 
-1. Create a **Render Postgres** database (free tier available).
-2. Copy its **Internal Database URL**.
-3. Add it to your web service as the `DATABASE_URL` environment variable.
-4. Redeploy — `app.py` automatically detects `DATABASE_URL` and uses
-   Postgres instead of SQLite (via `psycopg2-binary`, already in
-   `requirements.txt`).
+The application reads PostgreSQL from `DATABASE_URL`. If the variable is
+not present, it falls back to SQLite for local development.
 
-## Environment variables
+## Current Analysis
 
-| Variable       | Required | Description                                   |
-|----------------|----------|------------------------------------------------|
-| `SECRET_KEY`   | Yes      | Flask session signing key                      |
-| `DATABASE_URL` | No       | Postgres connection string; falls back to SQLite |
-| `PORT`         | No       | Set automatically by Render                    |
+Journal text is analyzed using VADER sentiment analysis and the application's
+emotion-related signal logic. Results are intended for wellness support and
+must not be interpreted as a clinical diagnosis.
 
-## Notes on responsible design
+## Planned Enhancements
 
-- The app never states or implies a clinical diagnosis (e.g. "you have
-  depression"). It only labels general language patterns.
-- Messages matching a short list of crisis-related phrases are routed to
-  a safety message encouraging the user to contact a trusted person,
-  a professional, or emergency services — the app explicitly states that
-  automated detection can be wrong and is not an emergency service.
-- The Support & Resources page is shown regardless of login state.
+- Multi-question mood assessment
+- Weekly wellness summaries
+- Conversational support assistant
+- Additional non-diagnostic wellness signals
+- Optional voice-based emotion-related signal analysis
