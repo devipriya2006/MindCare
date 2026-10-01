@@ -13,7 +13,11 @@ from flask_login import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from analysis import analyze_text, MOOD_VALUES
+from analysis import (
+    analyze_text,
+    calculate_wellness,
+    MOOD_VALUES
+)
 
 
 # --------------------------------------------------------------------------
@@ -69,7 +73,10 @@ login_manager.login_message_category = "info"
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     name = db.Column(
         db.String(120),
@@ -155,7 +162,7 @@ class MoodEntry(db.Model):
         nullable=True
     )
 
-    # Journal and analysis
+    # Journal and text analysis
     journal_text = db.Column(
         db.Text,
         nullable=True
@@ -179,6 +186,22 @@ class MoodEntry(db.Model):
     distress_flag = db.Column(
         db.Boolean,
         default=False
+    )
+
+    # Combined wellness analysis
+    wellness_score = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    wellness_level = db.Column(
+        db.String(30),
+        nullable=True
+    )
+
+    wellness_insight = db.Column(
+        db.Text,
+        nullable=True
     )
 
     created_at = db.Column(
@@ -391,32 +414,22 @@ def checkin():
 
     if request.method == "POST":
 
-        mood = request.form.get(
-            "mood"
-        )
+        mood = request.form.get("mood")
 
-        energy = request.form.get(
-            "energy"
-        )
+        energy = request.form.get("energy")
 
-        sleep = request.form.get(
-            "sleep"
-        )
+        sleep = request.form.get("sleep")
 
-        stress = request.form.get(
-            "stress"
-        )
+        stress = request.form.get("stress")
 
-        connection = request.form.get(
-            "connection"
-        )
+        connection = request.form.get("connection")
 
         journal_text = request.form.get(
             "journal_text",
             ""
         ).strip()
 
-        # Validate main mood
+        # Validate mood
         if mood not in MOOD_VALUES:
 
             flash(
@@ -445,13 +458,33 @@ def checkin():
                 "checkin.html"
             )
 
-        # Analyze journal text
+        # --------------------------------------------------------------
+        # Analyze journal
+        # --------------------------------------------------------------
+
         result = analyze_text(
             journal_text
         )
 
+        # --------------------------------------------------------------
+        # Calculate combined wellness signal
+        # --------------------------------------------------------------
+
+        wellness = calculate_wellness(
+            mood=mood,
+            energy=energy,
+            sleep=sleep,
+            stress=stress,
+            connection=connection,
+            sentiment=result["sentiment"]
+        )
+
+        # --------------------------------------------------------------
         # Create database entry
+        # --------------------------------------------------------------
+
         entry = MoodEntry(
+
             user_id=current_user.id,
 
             mood=mood,
@@ -475,6 +508,12 @@ def checkin():
             support_message=result["support_message"],
 
             distress_flag=result["distress_flag"],
+
+            wellness_score=wellness["wellness_score"],
+
+            wellness_level=wellness["wellness_level"],
+
+            wellness_insight=wellness["wellness_insight"],
         )
 
         db.session.add(entry)
