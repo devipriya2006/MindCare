@@ -1,15 +1,14 @@
 import os
-from datetime import datetime, timedelta
 
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager,
     UserMixin,
     login_user,
-    login_required,
     logout_user,
-    current_user,
+    login_required,
+    current_user
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -20,15 +19,15 @@ from analysis import (
 )
 
 
-# --------------------------------------------------------------------------
-# App / Config
-# --------------------------------------------------------------------------
+# ============================================================
+# APP CONFIGURATION
+# ============================================================
 
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.environ.get(
     "SECRET_KEY",
-    "dev-secret-change-me"
+    "mindcare-development-secret-key"
 )
 
 database_url = os.environ.get("DATABASE_URL", "")
@@ -40,37 +39,27 @@ if database_url.startswith("postgres://"):
         1
     )
 
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url or (
-    "sqlite:///"
-    + os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "database",
-        "mindcare.db"
-    )
-)
+if database_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///mindcare.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-os.makedirs(
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "database"
-    ),
-    exist_ok=True
-)
 
 db = SQLAlchemy(app)
 
-login_manager = LoginManager(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 login_manager.login_view = "login"
-login_manager.login_message_category = "info"
 
 
-# --------------------------------------------------------------------------
-# Models
-# --------------------------------------------------------------------------
+# ============================================================
+# USER MODEL
+# ============================================================
 
 class User(UserMixin, db.Model):
+
     __tablename__ = "users"
 
     id = db.Column(
@@ -78,13 +67,14 @@ class User(UserMixin, db.Model):
         primary_key=True
     )
 
-    name = db.Column(
-        db.String(120),
+    username = db.Column(
+        db.String(100),
+        unique=True,
         nullable=False
     )
 
     email = db.Column(
-        db.String(160),
+        db.String(150),
         unique=True,
         nullable=False
     )
@@ -96,14 +86,14 @@ class User(UserMixin, db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        server_default=db.func.now()
     )
 
-    entries = db.relationship(
+    mood_entries = db.relationship(
         "MoodEntry",
         backref="user",
         lazy=True,
-        order_by="desc(MoodEntry.created_at)"
+        cascade="all, delete-orphan"
     )
 
     def set_password(self, password):
@@ -116,7 +106,12 @@ class User(UserMixin, db.Model):
         )
 
 
+# ============================================================
+# MOOD ENTRY MODEL
+# ============================================================
+
 class MoodEntry(db.Model):
+
     __tablename__ = "mood_entries"
 
     id = db.Column(
@@ -130,18 +125,40 @@ class MoodEntry(db.Model):
         nullable=False
     )
 
-    # Main mood
     mood = db.Column(
-        db.String(20),
+        db.String(30),
         nullable=False
     )
 
-    mood_score = db.Column(
-        db.Integer,
-        nullable=False
+    journal_text = db.Column(
+        db.Text,
+        nullable=True
     )
 
-    # Smart check-in answers
+    sentiment = db.Column(
+        db.String(30),
+        nullable=True
+    )
+
+    emotion_signal = db.Column(
+        db.String(50),
+        nullable=True
+    )
+
+    support_message = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    distress_flag = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    # --------------------------------------------------------
+    # SMART CHECK-IN FIELDS
+    # --------------------------------------------------------
+
     energy = db.Column(
         db.String(20),
         nullable=True
@@ -162,33 +179,10 @@ class MoodEntry(db.Model):
         nullable=True
     )
 
-    # Journal and text analysis
-    journal_text = db.Column(
-        db.Text,
-        nullable=True
-    )
+    # --------------------------------------------------------
+    # WELLNESS ANALYSIS
+    # --------------------------------------------------------
 
-    sentiment = db.Column(
-        db.String(20),
-        nullable=False
-    )
-
-    emotion_signal = db.Column(
-        db.String(60),
-        nullable=False
-    )
-
-    support_message = db.Column(
-        db.Text,
-        nullable=False
-    )
-
-    distress_flag = db.Column(
-        db.Boolean,
-        default=False
-    )
-
-    # Combined wellness analysis
     wellness_score = db.Column(
         db.Integer,
         nullable=True
@@ -206,63 +200,50 @@ class MoodEntry(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        server_default=db.func.now()
     )
 
 
-# --------------------------------------------------------------------------
-# Login Manager
-# --------------------------------------------------------------------------
+# ============================================================
+# LOGIN MANAGER
+# ============================================================
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+
+    return db.session.get(
+        User,
+        int(user_id)
+    )
 
 
-# --------------------------------------------------------------------------
-# Create database tables
-# --------------------------------------------------------------------------
-
-with app.app_context():
-    db.create_all()
-
-
-# --------------------------------------------------------------------------
-# Home
-# --------------------------------------------------------------------------
+# ============================================================
+# HOME
+# ============================================================
 
 @app.route("/")
 def index():
 
     if current_user.is_authenticated:
-        return redirect(
-            url_for("dashboard")
-        )
+        return redirect(url_for("dashboard"))
 
-    return render_template(
-        "index.html"
-    )
+    return render_template("index.html")
 
 
-# --------------------------------------------------------------------------
-# Register
-# --------------------------------------------------------------------------
+# ============================================================
+# REGISTER
+# ============================================================
 
-@app.route(
-    "/register",
-    methods=["GET", "POST"]
-)
+@app.route("/register", methods=["GET", "POST"])
 def register():
 
     if current_user.is_authenticated:
-        return redirect(
-            url_for("dashboard")
-        )
+        return redirect(url_for("dashboard"))
 
     if request.method == "POST":
 
-        name = request.form.get(
-            "name",
+        username = request.form.get(
+            "username",
             ""
         ).strip()
 
@@ -276,43 +257,61 @@ def register():
             ""
         )
 
-        if not name or not email or not password:
+        confirm_password = request.form.get(
+            "confirm_password",
+            ""
+        )
 
+        if not username or not email or not password:
             flash(
                 "Please fill in all fields.",
-                "error"
+                "danger"
             )
 
-            return render_template(
-                "register.html"
+            return redirect(
+                url_for("register")
             )
 
-        if len(password) < 6:
-
+        if password != confirm_password:
             flash(
-                "Password must be at least 6 characters.",
-                "error"
+                "Passwords do not match.",
+                "danger"
             )
 
-            return render_template(
-                "register.html"
+            return redirect(
+                url_for("register")
             )
 
-        if User.query.filter_by(
+        existing_username = User.query.filter_by(
+            username=username
+        ).first()
+
+        if existing_username:
+            flash(
+                "Username already exists.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("register")
+            )
+
+        existing_email = User.query.filter_by(
             email=email
-        ).first():
+        ).first()
 
+        if existing_email:
             flash(
-                "An account with that email already exists.",
-                "error"
+                "Email already exists.",
+                "danger"
             )
 
-            return render_template(
-                "register.html"
+            return redirect(
+                url_for("register")
             )
 
         user = User(
-            name=name,
+            username=username,
             email=email
         )
 
@@ -321,36 +320,27 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        login_user(user)
-
         flash(
-            "Welcome to MindCare! Your account has been created.",
+            "Registration successful. Please login.",
             "success"
         )
 
         return redirect(
-            url_for("dashboard")
+            url_for("login")
         )
 
-    return render_template(
-        "register.html"
-    )
+    return render_template("register.html")
 
 
-# --------------------------------------------------------------------------
-# Login
-# --------------------------------------------------------------------------
+# ============================================================
+# LOGIN
+# ============================================================
 
-@app.route(
-    "/login",
-    methods=["GET", "POST"]
-)
+@app.route("/login", methods=["GET", "POST"])
 def login():
 
     if current_user.is_authenticated:
-        return redirect(
-            url_for("dashboard")
-        )
+        return redirect(url_for("dashboard"))
 
     if request.method == "POST":
 
@@ -378,17 +368,15 @@ def login():
 
         flash(
             "Invalid email or password.",
-            "error"
+            "danger"
         )
 
-    return render_template(
-        "login.html"
-    )
+    return render_template("login.html")
 
 
-# --------------------------------------------------------------------------
-# Logout
-# --------------------------------------------------------------------------
+# ============================================================
+# LOGOUT
+# ============================================================
 
 @app.route("/logout")
 @login_required
@@ -401,74 +389,144 @@ def logout():
     )
 
 
-# --------------------------------------------------------------------------
-# Smart Mood Check-in
-# --------------------------------------------------------------------------
+# ============================================================
+# CHECK-IN
+# ============================================================
 
-@app.route(
-    "/checkin",
-    methods=["GET", "POST"]
-)
+@app.route("/checkin", methods=["GET", "POST"])
 @login_required
 def checkin():
 
     if request.method == "POST":
 
-        mood = request.form.get("mood")
+        # ----------------------------------------------------
+        # GET ALL CHECK-IN VALUES
+        # ----------------------------------------------------
 
-        energy = request.form.get("energy")
+        mood = request.form.get(
+            "mood",
+            ""
+        ).strip().lower()
 
-        sleep = request.form.get("sleep")
+        energy = request.form.get(
+            "energy",
+            ""
+        ).strip().lower()
 
-        stress = request.form.get("stress")
+        sleep = request.form.get(
+            "sleep",
+            ""
+        ).strip().lower()
 
-        connection = request.form.get("connection")
+        stress = request.form.get(
+            "stress",
+            ""
+        ).strip().lower()
+
+        connection = request.form.get(
+            "connection",
+            ""
+        ).strip().lower()
 
         journal_text = request.form.get(
             "journal_text",
             ""
         ).strip()
 
-        # Validate mood
-        if mood not in MOOD_VALUES:
+        # ----------------------------------------------------
+        # DEBUG
+        # ----------------------------------------------------
 
+        print("======================================")
+        print("MINDCARE CHECK-IN")
+        print("======================================")
+        print("Mood       :", mood)
+        print("Energy     :", energy)
+        print("Sleep      :", sleep)
+        print("Stress     :", stress)
+        print("Connection :", connection)
+        print("Journal    :", journal_text)
+        print("======================================")
+
+        # ----------------------------------------------------
+        # VALIDATION
+        # ----------------------------------------------------
+
+        if not mood:
             flash(
-                "Please select a mood.",
-                "error"
+                "Please select your mood.",
+                "danger"
             )
 
-            return render_template(
-                "checkin.html"
+            return redirect(
+                url_for("checkin")
             )
 
-        # Validate smart questions
-        if (
-            not energy
-            or not sleep
-            or not stress
-            or not connection
-        ):
-
+        if not energy:
             flash(
-                "Please answer all wellness questions.",
-                "error"
+                "Please select your energy level.",
+                "danger"
             )
 
-            return render_template(
-                "checkin.html"
+            return redirect(
+                url_for("checkin")
             )
 
-        # --------------------------------------------------------------
-        # Analyze journal
-        # --------------------------------------------------------------
+        if not sleep:
+            flash(
+                "Please select your sleep quality.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("checkin")
+            )
+
+        if not stress:
+            flash(
+                "Please select your stress level.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("checkin")
+            )
+
+        if not connection:
+            flash(
+                "Please select your connection level.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("checkin")
+            )
+
+        # ----------------------------------------------------
+        # JOURNAL / TEXT ANALYSIS
+        # ----------------------------------------------------
 
         result = analyze_text(
             journal_text
         )
 
-        # --------------------------------------------------------------
-        # Calculate combined wellness signal
-        # --------------------------------------------------------------
+        print("TEXT SENTIMENT:", result["sentiment"])
+        print("EMOTION SIGNAL:", result["emotion_signal"])
+        print("DISTRESS FLAG:", result["distress_flag"])
+
+        # ----------------------------------------------------
+        # COMBINED WELLNESS CALCULATION
+        #
+        # IMPORTANT:
+        # This uses ALL 6 inputs:
+        #
+        # Mood       = 30%
+        # Energy     = 15%
+        # Sleep      = 15%
+        # Stress     = 20%
+        # Connection = 10%
+        # Journal    = 10%
+        # ----------------------------------------------------
 
         wellness = calculate_wellness(
             mood=mood,
@@ -479,25 +537,27 @@ def checkin():
             sentiment=result["sentiment"]
         )
 
-        # --------------------------------------------------------------
-        # Create database entry
-        # --------------------------------------------------------------
+        wellness_score = wellness["wellness_score"]
+        wellness_level = wellness["wellness_level"]
+        wellness_insight = wellness["wellness_insight"]
+
+        print("======================================")
+        print("WELLNESS CALCULATION")
+        print("======================================")
+        print("Wellness Score :", wellness_score)
+        print("Wellness Level :", wellness_level)
+        print("Wellness Insight:", wellness_insight)
+        print("======================================")
+
+        # ----------------------------------------------------
+        # SAVE EVERYTHING TO DATABASE
+        # ----------------------------------------------------
 
         entry = MoodEntry(
 
             user_id=current_user.id,
 
             mood=mood,
-
-            mood_score=MOOD_VALUES[mood],
-
-            energy=energy,
-
-            sleep=sleep,
-
-            stress=stress,
-
-            connection=connection,
 
             journal_text=journal_text,
 
@@ -509,16 +569,26 @@ def checkin():
 
             distress_flag=result["distress_flag"],
 
-            wellness_score=wellness["wellness_score"],
+            energy=energy,
 
-            wellness_level=wellness["wellness_level"],
+            sleep=sleep,
 
-            wellness_insight=wellness["wellness_insight"],
+            stress=stress,
+
+            connection=connection,
+
+            wellness_score=wellness_score,
+
+            wellness_level=wellness_level,
+
+            wellness_insight=wellness_insight
         )
 
         db.session.add(entry)
 
         db.session.commit()
+
+        print("ENTRY SAVED:", entry.id)
 
         return redirect(
             url_for(
@@ -528,18 +598,15 @@ def checkin():
         )
 
     return render_template(
-        "checkin.html",
-        mood_values=MOOD_VALUES
+        "checkin.html"
     )
 
 
-# --------------------------------------------------------------------------
-# Result
-# --------------------------------------------------------------------------
+# ============================================================
+# RESULT
+# ============================================================
 
-@app.route(
-    "/result/<int:entry_id>"
-)
+@app.route("/result/<int:entry_id>")
 @login_required
 def result(entry_id):
 
@@ -554,77 +621,39 @@ def result(entry_id):
     )
 
 
-# --------------------------------------------------------------------------
-# Dashboard
-# --------------------------------------------------------------------------
+# ============================================================
+# DASHBOARD
+# ============================================================
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
 
-    recent_entries = (
-        MoodEntry.query
-        .filter_by(
-            user_id=current_user.id
-        )
-        .order_by(
-            MoodEntry.created_at.desc()
-        )
-        .limit(5)
-        .all()
-    )
-
-    total_entries = (
-        MoodEntry.query
-        .filter_by(
-            user_id=current_user.id
-        )
-        .count()
-    )
-
-    week_ago = (
-        datetime.utcnow()
-        - timedelta(days=7)
-    )
-
-    week_entries = MoodEntry.query.filter(
-        MoodEntry.user_id == current_user.id,
-        MoodEntry.created_at >= week_ago,
-    ).count()
-
-    latest = (
-        recent_entries[0]
-        if recent_entries
-        else None
-    )
+    entries = MoodEntry.query.filter_by(
+        user_id=current_user.id
+    ).order_by(
+        MoodEntry.created_at.desc()
+    ).all()
 
     return render_template(
         "dashboard.html",
-        recent_entries=recent_entries,
-        total_entries=total_entries,
-        week_entries=week_entries,
-        latest=latest,
+        entries=entries
     )
 
 
-# --------------------------------------------------------------------------
-# History
-# --------------------------------------------------------------------------
+# ============================================================
+# HISTORY
+# ============================================================
 
 @app.route("/history")
 @login_required
 def history():
 
-    entries = (
-        MoodEntry.query
-        .filter_by(
-            user_id=current_user.id
-        )
-        .order_by(
-            MoodEntry.created_at.desc()
-        )
-        .all()
-    )
+    entries = MoodEntry.query.filter_by(
+        user_id=current_user.id
+    ).order_by(
+        MoodEntry.created_at.desc()
+    ).all()
 
     return render_template(
         "history.html",
@@ -632,9 +661,9 @@ def history():
     )
 
 
-# --------------------------------------------------------------------------
-# Support
-# --------------------------------------------------------------------------
+# ============================================================
+# SUPPORT / RESOURCES
+# ============================================================
 
 @app.route("/support")
 def support():
@@ -644,69 +673,71 @@ def support():
     )
 
 
-# --------------------------------------------------------------------------
-# Dashboard JSON API
-# --------------------------------------------------------------------------
+# ============================================================
+# MOOD DATA API
+# ============================================================
 
 @app.route("/api/mood-data")
 @login_required
 def mood_data():
 
-    entries = (
-        MoodEntry.query
-        .filter_by(
-            user_id=current_user.id
-        )
-        .order_by(
-            MoodEntry.created_at.asc()
-        )
-        .limit(30)
-        .all()
-    )
+    entries = MoodEntry.query.filter_by(
+        user_id=current_user.id
+    ).order_by(
+        MoodEntry.created_at.asc()
+    ).all()
 
-    trend = [
-        {
-            "date": e.created_at.strftime("%b %d"),
-            "score": e.mood_score
-        }
-        for e in entries
-    ]
+    data = []
 
-    distribution = {
-        "Positive": 0,
-        "Neutral": 0,
-        "Negative": 0
-    }
+    for entry in entries:
 
-    for e in entries:
+        data.append({
+            "date": (
+                entry.created_at.strftime("%Y-%m-%d")
+                if entry.created_at
+                else ""
+            ),
 
-        if e.sentiment in distribution:
+            "mood": entry.mood,
 
-            distribution[e.sentiment] += 1
+            "mood_value": MOOD_VALUES.get(
+                entry.mood,
+                0
+            ),
 
-    return jsonify(
-        {
-            "trend": trend,
-            "distribution": distribution
-        }
-    )
+            "sentiment": entry.sentiment,
+
+            "wellness_score": (
+                entry.wellness_score
+                if entry.wellness_score is not None
+                else 0
+            ),
+
+            "wellness_level": (
+                entry.wellness_level
+                if entry.wellness_level
+                else ""
+            )
+        })
+
+    return jsonify(data)
 
 
-# --------------------------------------------------------------------------
-# Run
-# --------------------------------------------------------------------------
+# ============================================================
+# CREATE DATABASE TABLES
+# ============================================================
+
+with app.app_context():
+
+    db.create_all()
+
+
+# ============================================================
+# RUN APP
+# ============================================================
 
 if __name__ == "__main__":
 
-    port = int(
-        os.environ.get(
-            "PORT",
-            5000
-        )
-    )
-
     app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False
+        debug=True
     )
