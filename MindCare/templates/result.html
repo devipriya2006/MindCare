@@ -1,49 +1,246 @@
-{% extends "base.html" %}
-{% block title %}Your Check-in Result — MindCare{% endblock %}
-{% block content %}
-<section class="result-card {% if entry.distress_flag %}result-distress{% endif %}">
-  <h2>Check-in Recorded</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <p class="result-mood">Your Selected Mood: <strong>{{ entry.mood|capitalize }}</strong></p>
+    <title>MindCare - Result</title>
 
-  {% if entry.journal_text %}
-  <div class="result-block">
-    <h3>Text Analysis</h3>
-    <p><strong>Possible Emotional Signal:</strong> {{ entry.emotion_signal }}</p>
-    <p><strong>General Sentiment:</strong> {{ entry.sentiment }}</p>
-  </div>
-  {% endif %}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 30px;
+        }
 
-  <div class="result-block">
-    <h3>Support Suggestion</h3>
-    <p>{{ entry.support_message }}</p>
-  </div>
+        .container {
+            max-width: 850px;
+            margin: auto;
+        }
 
-  {% if entry.distress_flag %}
-  <div class="safety-banner">
-    <h3>🆘 You don't have to handle this alone</h3>
-    <p>
-      If you may be in immediate danger, please contact your local
-      emergency number right away. You can also reach out to a trusted
-      person, or visit our <a href="{{ url_for('support') }}">Support &amp;
-      Resources</a> page for more options.
-    </p>
-    <p class="fine-print">
-      This message was generated automatically based on general language
-      patterns and can be mistaken. It is not a diagnosis or emergency
-      response.
-    </p>
-  </div>
-  {% endif %}
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
 
-  <p class="disclaimer">
-    This analysis reflects general language patterns only and is not a
-    medical or psychological diagnosis.
-  </p>
+        h1 {
+            margin-bottom: 10px;
+        }
 
-  <div class="result-actions">
-    <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Go to Dashboard</a>
-    <a class="btn btn-primary" href="{{ url_for('checkin') }}">New Check-in</a>
-  </div>
-</section>
-{% endblock %}
+        h2 {
+            margin-top: 0;
+        }
+
+        .wellness-score {
+            font-size: 55px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .level {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .answers {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .answer {
+            background: #f5f7fb;
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .answer strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .insight {
+            background: #f5f7fb;
+            padding: 20px;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+
+        .journal {
+            background: #f5f7fb;
+            padding: 20px;
+            border-radius: 12px;
+            white-space: pre-wrap;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 20px;
+            background: #4f46e5;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .answers {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>Your MindCare Check-in</h1>
+
+        <p>
+            Your responses have been analyzed together.
+        </p>
+
+    </div>
+
+
+    <!-- WELLNESS RESULT -->
+
+    <div class="card">
+
+        <h2>Overall Wellness Signal</h2>
+
+        <div class="wellness-score">
+            {{ entry.wellness_score if entry.wellness_score is not none else "N/A" }}/100
+        </div>
+
+        <div class="level">
+            {{ entry.wellness_level if entry.wellness_level else "Not available" }}
+        </div>
+
+        {% if entry.wellness_insight %}
+
+        <div class="insight">
+            {{ entry.wellness_insight }}
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- ALL ANSWERS -->
+
+    <div class="card">
+
+        <h2>Your Check-in Responses</h2>
+
+        <div class="answers">
+
+            <div class="answer">
+                <strong>Mood</strong>
+                {{ entry.mood }}
+            </div>
+
+            <div class="answer">
+                <strong>Energy</strong>
+                {{ entry.energy }}
+            </div>
+
+            <div class="answer">
+                <strong>Sleep</strong>
+                {{ entry.sleep }}
+            </div>
+
+            <div class="answer">
+                <strong>Stress</strong>
+                {{ entry.stress }}
+            </div>
+
+            <div class="answer">
+                <strong>Connection</strong>
+                {{ entry.connection }}
+            </div>
+
+            <div class="answer">
+                <strong>Journal Sentiment</strong>
+                {{ entry.sentiment }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- JOURNAL -->
+
+    {% if entry.journal_text %}
+
+    <div class="card">
+
+        <h2>Your Journal</h2>
+
+        <div class="journal">
+            {{ entry.journal_text }}
+        </div>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- TEXT ANALYSIS -->
+
+    <div class="card">
+
+        <h2>Journal Analysis</h2>
+
+        <p>
+            <strong>Sentiment:</strong>
+            {{ entry.sentiment }}
+        </p>
+
+        <p>
+            <strong>Emotion-related signal:</strong>
+            {{ entry.emotion_signal }}
+        </p>
+
+        {% if entry.support_message %}
+
+        <p>
+            <strong>Support:</strong>
+            {{ entry.support_message }}
+        </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- BUTTONS -->
+
+    <div class="card">
+
+        <a href="{{ url_for('dashboard') }}" class="button">
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('checkin') }}" class="button">
+            New Check-in
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+</html>
