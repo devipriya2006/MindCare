@@ -1,41 +1,184 @@
 {% extends "base.html" %}
+
 {% block title %}Daily Check-in — MindCare{% endblock %}
+
 {% block content %}
+
 <section class="checkin-card">
-  <h2>How are you feeling today?</h2>
+
+  <h2>Daily Wellness Check-in</h2>
+
   <form method="POST" action="{{ url_for('checkin') }}">
-    <div class="mood-selector">
-      <label class="mood-option">
-        <input type="radio" name="mood" value="great" required>
-        <span class="mood-emoji">😊</span><span>Great</span>
-      </label>
-      <label class="mood-option">
-        <input type="radio" name="mood" value="good">
-        <span class="mood-emoji">🙂</span><span>Good</span>
-      </label>
-      <label class="mood-option">
-        <input type="radio" name="mood" value="okay">
-        <span class="mood-emoji">😐</span><span>Okay</span>
-      </label>
-      <label class="mood-option">
-        <input type="radio" name="mood" value="low">
-        <span class="mood-emoji">😔</span><span>Low</span>
-      </label>
-      <label class="mood-option">
-        <input type="radio" name="mood" value="angry">
-        <span class="mood-emoji">😡</span><span>Angry</span>
-      </label>
-      <label class="mood-option">
-        <input type="radio" name="mood" value="stressed">
-        <span class="mood-emoji">😰</span><span>Stressed</span>
-      </label>
+
+    <div class="question-block">
+      <h3>1. How are you feeling today?</h3>
+
+      <div class="mood-selector">
+
+        <label class="mood-option">
+          <input type="radio" name="mood" value="great" required>
+          <span class="mood-emoji">😊</span>
+          <span>Great</span>
+        </label>
+
+        <label class="mood-option">
+          <input type="radio" name="mood" value="good">
+          <span class="mood-emoji">🙂</span>
+          <span>Good</span>
+        </label>
+
+        <label class="mood-option">
+          <input type="radio" name="mood" value="okay">
+          <span class="mood-emoji">😐</span>
+          <span>Okay</span>
+        </label>
+
+        <label class="mood-option">
+          <input type="radio" name="mood" value="low">
+          <span class="mood-emoji">😔</span>
+          <span>Low</span>
+        </label>
+
+        <label class="mood-option">
+          <input type="radio" name="mood" value="angry">
+          <span class="mood-emoji">😡</span>
+          <span>Angry</span>
+        </label>
+
+        <label class="mood-option">
+          <input type="radio" name="mood" value="stressed">
+          <span class="mood-emoji">😰</span>
+          <span>Stressed</span>
+        </label>
+
+      </div>
     </div>
 
-    <label for="journal_text">Tell us more (optional)</label>
-    <textarea id="journal_text" name="journal_text" rows="5"
-      placeholder="What's on your mind today?"></textarea>
+    <div class="question-block">
+      <h3>2. How is your energy today?</h3>
 
-    <button type="submit" class="btn btn-primary">Analyze</button>
+      <div class="option-group">
+        <label>
+          <input type="radio" name="energy" value="high" required>
+          High
+        </label>
+
+        <label>
+          <input type="radio" name="energy" value="moderate">
+          Moderate
+        </label>
+
+        <label>
+          <input type="radio" name="energy" value="low">
+          Low
+        </label>
+
+        <label>
+          <input type="radio" name="energy" value="very_low">
+          Very Low
+        </label>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <h3>3. How was your sleep recently?</h3>
+
+      <div class="option-group">
+        <label>
+          <input type="radio" name="sleep" value="good" required>
+          Good
+        </label>
+
+        <label>
+          <input type="radio" name="sleep" value="okay">
+          Okay
+        </label>
+
+        <label>
+          <input type="radio" name="sleep" value="poor">
+          Poor
+        </label>
+
+        <label>
+          <input type="radio" name="sleep" value="very_poor">
+          Very Poor
+        </label>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <h3>4. How much stress are you experiencing?</h3>
+
+      <div class="option-group">
+        <label>
+          <input type="radio" name="stress" value="low" required>
+          Low
+        </label>
+
+        <label>
+          <input type="radio" name="stress" value="moderate">
+          Moderate
+        </label>
+
+        <label>
+          <input type="radio" name="stress" value="high">
+          High
+        </label>
+
+        <label>
+          <input type="radio" name="stress" value="very_high">
+          Very High
+        </label>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <h3>5. How connected do you feel to people around you?</h3>
+
+      <div class="option-group">
+        <label>
+          <input type="radio" name="connection" value="connected" required>
+          Connected
+        </label>
+
+        <label>
+          <input type="radio" name="connection" value="somewhat">
+          Somewhat Connected
+        </label>
+
+        <label>
+          <input type="radio" name="connection" value="alone">
+          A Little Alone
+        </label>
+
+        <label>
+          <input type="radio" name="connection" value="very_alone">
+          Very Alone
+        </label>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <h3>6. Tell us more</h3>
+
+      <label for="journal_text">
+        What's on your mind today?
+      </label>
+
+      <textarea
+        id="journal_text"
+        name="journal_text"
+        rows="6"
+        placeholder="You can write anything you'd like to share..."
+      ></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      Check My Wellness
+    </button>
+
   </form>
+
 </section>
+
 {% endblock %}
