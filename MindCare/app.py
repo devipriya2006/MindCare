@@ -392,16 +392,14 @@ def logout():
 # ============================================================
 # CHECK-IN
 # ============================================================
-
-@app.route("/checkin", methods=["GET", "POST"])
+@app.route(
+    "/checkin",
+    methods=["GET", "POST"]
+)
 @login_required
 def checkin():
 
     if request.method == "POST":
-
-        # ----------------------------------------------------
-        # GET ALL CHECK-IN VALUES
-        # ----------------------------------------------------
 
         mood = request.form.get(
             "mood",
@@ -433,101 +431,43 @@ def checkin():
             ""
         ).strip()
 
-        # ----------------------------------------------------
-        # DEBUG
-        # ----------------------------------------------------
+        # Validate mood
+        if mood not in MOOD_VALUES:
 
-        print("======================================")
-        print("MINDCARE CHECK-IN")
-        print("======================================")
-        print("Mood       :", mood)
-        print("Energy     :", energy)
-        print("Sleep      :", sleep)
-        print("Stress     :", stress)
-        print("Connection :", connection)
-        print("Journal    :", journal_text)
-        print("======================================")
-
-        # ----------------------------------------------------
-        # VALIDATION
-        # ----------------------------------------------------
-
-        if not mood:
             flash(
-                "Please select your mood.",
-                "danger"
+                "Please select a mood.",
+                "error"
             )
 
-            return redirect(
-                url_for("checkin")
+            return render_template(
+                "checkin.html",
+                mood_values=MOOD_VALUES
             )
 
-        if not energy:
+        # Validate all wellness questions
+        if (
+            not energy
+            or not sleep
+            or not stress
+            or not connection
+        ):
+
             flash(
-                "Please select your energy level.",
-                "danger"
+                "Please answer all wellness questions.",
+                "error"
             )
 
-            return redirect(
-                url_for("checkin")
+            return render_template(
+                "checkin.html",
+                mood_values=MOOD_VALUES
             )
 
-        if not sleep:
-            flash(
-                "Please select your sleep quality.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("checkin")
-            )
-
-        if not stress:
-            flash(
-                "Please select your stress level.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("checkin")
-            )
-
-        if not connection:
-            flash(
-                "Please select your connection level.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("checkin")
-            )
-
-        # ----------------------------------------------------
-        # JOURNAL / TEXT ANALYSIS
-        # ----------------------------------------------------
-
+        # Analyze journal
         result = analyze_text(
             journal_text
         )
 
-        print("TEXT SENTIMENT:", result["sentiment"])
-        print("EMOTION SIGNAL:", result["emotion_signal"])
-        print("DISTRESS FLAG:", result["distress_flag"])
-
-        # ----------------------------------------------------
-        # COMBINED WELLNESS CALCULATION
-        #
-        # IMPORTANT:
-        # This uses ALL 6 inputs:
-        #
-        # Mood       = 30%
-        # Energy     = 15%
-        # Sleep      = 15%
-        # Stress     = 20%
-        # Connection = 10%
-        # Journal    = 10%
-        # ----------------------------------------------------
-
+        # Calculate wellness using ALL answers
         wellness = calculate_wellness(
             mood=mood,
             energy=energy,
@@ -537,27 +477,22 @@ def checkin():
             sentiment=result["sentiment"]
         )
 
-        wellness_score = wellness["wellness_score"]
-        wellness_level = wellness["wellness_level"]
-        wellness_insight = wellness["wellness_insight"]
-
-        print("======================================")
-        print("WELLNESS CALCULATION")
-        print("======================================")
-        print("Wellness Score :", wellness_score)
-        print("Wellness Level :", wellness_level)
-        print("Wellness Insight:", wellness_insight)
-        print("======================================")
-
-        # ----------------------------------------------------
-        # SAVE EVERYTHING TO DATABASE
-        # ----------------------------------------------------
-
+        # Create database entry
         entry = MoodEntry(
 
             user_id=current_user.id,
 
             mood=mood,
+
+            mood_score=MOOD_VALUES[mood],
+
+            energy=energy,
+
+            sleep=sleep,
+
+            stress=stress,
+
+            connection=connection,
 
             journal_text=journal_text,
 
@@ -569,26 +504,16 @@ def checkin():
 
             distress_flag=result["distress_flag"],
 
-            energy=energy,
+            wellness_score=wellness["wellness_score"],
 
-            sleep=sleep,
+            wellness_level=wellness["wellness_level"],
 
-            stress=stress,
-
-            connection=connection,
-
-            wellness_score=wellness_score,
-
-            wellness_level=wellness_level,
-
-            wellness_insight=wellness_insight
+            wellness_insight=wellness["wellness_insight"]
         )
 
         db.session.add(entry)
 
         db.session.commit()
-
-        print("ENTRY SAVED:", entry.id)
 
         return redirect(
             url_for(
@@ -598,9 +523,14 @@ def checkin():
         )
 
     return render_template(
-        "checkin.html"
+        "checkin.html",
+        mood_values=MOOD_VALUES
     )
 
+
+# --------------------------------------------------------------------------
+# Result
+# --------------------------------------------------------------------------
 
 # ============================================================
 # RESULT
