@@ -37,21 +37,28 @@
       <a href="{{ url_for('automatic_checkin') }}">try automatic check-in</a>.
     </p>
   {% else %}
+
     <div class="chart-row">
       <div class="chart-card">
         <h3>Mood Trend</h3>
-        <canvas id="trendChart" height="220"></canvas>
+        <div style="position: relative; height: 260px; width: 100%;">
+          <canvas id="trendChart"></canvas>
+        </div>
       </div>
 
       <div class="chart-card">
         <h3>Sentiment Distribution</h3>
-        <canvas id="distributionChart" height="220"></canvas>
+        <div style="position: relative; height: 260px; width: 100%;">
+          <canvas id="distributionChart"></canvas>
+        </div>
       </div>
 
       <div class="chart-card">
         <h3>Facial Expression Distribution</h3>
         <p>Based only on saved automatic check-ins.</p>
-        <canvas id="faceDistributionChart" height="220"></canvas>
+        <div style="position: relative; height: 260px; width: 100%;">
+          <canvas id="faceDistributionChart"></canvas>
+        </div>
         <p class="history-note">
           These are AI-estimated facial expressions, not confirmed emotional
           states or medical assessments.
