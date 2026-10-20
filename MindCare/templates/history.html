@@ -1,26 +1,103 @@
+
 {% extends "base.html" %}
 {% block title %}Mood History — MindCare{% endblock %}
+
 {% block content %}
 <section class="history">
-  <h2>Journal History</h2>
+  <h2>Check-in History</h2>
+  <p>Your manual and AI-assisted check-ins, together in one place.</p>
 
   {% if not entries %}
     <p class="empty-state">
-      No entries yet. <a href="{{ url_for('checkin') }}">Log your first mood check-in</a>.
+      No entries yet.
+      <a href="{{ url_for('checkin') }}">Try a manual check-in</a>
+      or
+      <a href="{{ url_for('automatic_checkin') }}">try an automatic check-in</a>.
     </p>
   {% else %}
     {% for e in entries %}
-    <div class="history-entry {% if e.distress_flag %}history-entry-distress{% endif %}">
-      <div class="history-entry-header">
-        <span class="history-date">{{ e.created_at.strftime('%B %d, %Y — %I:%M %p') }}</span>
-        <span class="history-mood">{{ e.mood|capitalize }}</span>
+      <div class="history-entry {% if e.distress_flag %}history-entry-distress{% endif %}">
+        <div class="history-entry-header">
+          <span class="history-date">
+            {{ e.created_at.strftime('%B %d, %Y — %I:%M %p') if e.created_at else 'Date unavailable' }}
+          </span>
+
+          {% if e.checkin_type == 'automatic' %}
+            <span class="history-mood">Automatic · Facial Expression</span>
+          {% else %}
+            <span class="history-mood">Manual · {{ e.mood|capitalize }}</span>
+          {% endif %}
+        </div>
+
+        {% if e.checkin_type == 'automatic' %}
+          <div class="face-history-result">
+            <p>
+              <strong>AI-estimated expression:</strong>
+              {{ (e.detected_expression or 'Unavailable')|capitalize }}
+            </p>
+            <p>
+              <strong>Your confirmed expression:</strong>
+              {{ (e.confirmed_expression or e.mood or 'Unavailable')|capitalize }}
+            </p>
+
+            {% if e.expression_confidence is not none %}
+              <p>
+                <strong>Model confidence:</strong>
+                {{ "%.1f"|format(e.expression_confidence) }}%
+              </p>
+            {% endif %}
+
+            <p class="history-note">
+              This is a facial-expression estimate, not a diagnosis or proof
+              of how you feel.
+            </p>
+          </div>
+        {% else %}
+          {% if e.energy or e.sleep or e.stress or e.connection %}
+            <div class="manual-history-details">
+              {% if e.energy %}
+                <p><strong>Energy:</strong> {{ e.energy|replace('_', ' ')|capitalize }}</p>
+              {% endif %}
+              {% if e.sleep %}
+                <p><strong>Sleep:</strong> {{ e.sleep|replace('_', ' ')|capitalize }}</p>
+              {% endif %}
+              {% if e.stress %}
+                <p><strong>Stress:</strong> {{ e.stress|replace('_', ' ')|capitalize }}</p>
+              {% endif %}
+              {% if e.connection %}
+                <p><strong>Connection:</strong> {{ e.connection|replace('_', ' ')|capitalize }}</p>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if e.wellness_score is not none %}
+            <p>
+              <strong>Wellness score:</strong>
+              {{ e.wellness_score }}/100
+              {% if e.wellness_level %}
+                — {{ e.wellness_level }}
+              {% endif %}
+            </p>
+          {% endif %}
+
+          {% if e.journal_text %}
+            <p class="history-text">"{{ e.journal_text }}"</p>
+          {% endif %}
+
+          {% if e.emotion_signal %}
+            <p class="history-signal">
+              <strong>Analysis:</strong> {{ e.emotion_signal }}
+            </p>
+          {% endif %}
+        {% endif %}
       </div>
-      {% if e.journal_text %}
-        <p class="history-text">"{{ e.journal_text }}"</p>
-      {% endif %}
-      <p class="history-signal"><strong>Analysis:</strong> {{ e.emotion_signal }}</p>
-    </div>
     {% endfor %}
   {% endif %}
+
+  <div class="history-actions">
+    <a href="{{ url_for('checkin') }}">Manual check-in</a>
+    <span> · </span>
+    <a href="{{ url_for('automatic_checkin') }}">Automatic check-in</a>
+  </div>
 </section>
 {% endblock %}
