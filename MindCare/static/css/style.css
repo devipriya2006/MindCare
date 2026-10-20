@@ -259,3 +259,24 @@ form .btn { margin-top: 20px; }
   color: var(--muted);
   border-top: 1px solid var(--border);
 }
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.dashboard-actions .dashboard-btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #4f8ea8;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.dashboard-actions .dashboard-btn:hover {
+  background: #356b82;
+}
