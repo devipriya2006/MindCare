@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="automatic-checkin-page">
+  <h1>Automatic Mood Check-in</h1>
+  <p>
+    MindCare can estimate a visible facial-expression category from one camera frame.
+    This is not a diagnosis and may not reflect how you actually feel.
+  </p>
+
+  <div class="webcam-panel">
+    <video id="webcam" autoplay playsinline muted aria-label="Live webcam preview"></video>
+    <canvas id="capture-canvas" hidden></canvas>
+  </div>
+
+  <div class="webcam-controls">
+    <button id="start-camera" type="button">Enable camera</button>
+    <button id="capture-face" type="button" disabled>Analyze expression</button>
+    <button id="stop-camera" type="button" disabled>Turn camera off</button>
+  </div>
+
+  <p id="face-status" role="status" aria-live="polite">
+    Your camera is off. Enable it when you are ready.
+  </p>
+
+  <section id="face-result" hidden aria-live="polite">
+    <h2>Expression estimate</h2>
+    <p id="detected-expression"></p>
+    <p id="expression-confidence"></p>
+    <p>Review the estimate. You can correct it before saving.</p>
+
+    <label for="corrected-expression">Confirm or correct the expression</label>
+    <select id="corrected-expression">
+      <option value="happy">Happy</option>
+      <option value="neutral">Neutral</option>
+      <option value="sad">Sad</option>
+      <option value="angry">Angry</option>
+      <option value="fear">Fear</option>
+      <option value="surprise">Surprise</option>
+      <option value="disgust">Disgust</option>
+    </select>
+
+    <button id="confirm-expression" type="button">Confirm and save check-in</button>
+    <form id="confirm-expression-form" method="POST" action="{{ url_for('save_automatic_checkin') }}">
+      <input id="detected-expression-input" type="hidden" name="detected_expression">
+      <input id="expression-confidence-input" type="hidden" name="expression_confidence">
+      <input id="confirmed-expression-input" type="hidden" name="confirmed_expression">
+    </form>
+  </section>
+
+  <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
+</section>
+
+<script src="{{ url_for('static', filename='js/face_detection.js') }}" defer></script>
+{% endblock %}
