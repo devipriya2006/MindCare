@@ -64,9 +64,9 @@ async function loadDashboardCharts() {
     // 3. AI facial-expression distribution chart
     const faceCtx = document.getElementById("faceDistributionChart");
 
-    if (faceCtx && data.face_distribution) {
-      const labels = Object.keys(data.face_distribution);
-      const values = Object.values(data.face_distribution);
+if (faceCtx && data.facial_distribution) {
+  const labels = Object.keys(data.facial_distribution);
+  const values = Object.values(data.facial_distribution);
 
       new Chart(faceCtx, {
         type: "doughnut",
