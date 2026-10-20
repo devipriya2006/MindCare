@@ -1,50 +1,32 @@
+
 """
 MindCare facial-expression analysis helper.
 
-This module estimates visible facial-expression categories from a captured image.
-It does not diagnose mental-health conditions or establish a person's actual mood.
+Expression scores are model estimates, not proof of a person's
+actual mood or mental-health condition.
 """
 
-from io import BytesIO
 import os
 import tempfile
 
 from deepface import DeepFace
 
-
 ALLOWED_EXPRESSIONS = {
-    "angry",
-    "disgust",
-    "fear",
-    "happy",
-    "sad",
-    "surprise",
-    "neutral",
+    "angry", "disgust", "fear", "happy",
+    "sad", "surprise", "neutral",
 }
 
 
 def analyze_face(image_bytes: bytes) -> dict:
-    """
-    Analyze image bytes using DeepFace and return the leading expression.
-
-    Returns:
-        {
-            "expression": str,
-            "confidence": float,
-        }
-
-    Raises:
-        ValueError: If no usable face/expression is found.
-        RuntimeError: If the model cannot analyze the image.
-    """
     if not image_bytes:
         raise ValueError("No image was received.")
 
     temp_path = None
+
     try:
-        # DeepFace accepts a file path. Use a temporary file and remove it
-        # immediately after analysis so MindCare does not keep the image.
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            suffix=".jpg", delete=False
+        ) as temp_file:
             temp_file.write(image_bytes)
             temp_path = temp_file.name
 
@@ -58,32 +40,38 @@ def analyze_face(image_bytes: bytes) -> dict:
 
         if isinstance(results, list):
             if not results:
-                raise ValueError("No face was detected. Try again with your face clearly visible.")
+                raise ValueError(
+                    "No face detected. Keep your face clearly visible."
+                )
             result = results[0]
         else:
             result = results
 
         emotions = result.get("emotion") or {}
+
         if not emotions:
-            raise ValueError("The model could not estimate a facial expression.")
+            raise ValueError("No expression scores were returned.")
 
-        expression = max(emotions, key=emotions.get).lower()
-        if expression not in ALLOWED_EXPRESSIONS:
-            raise ValueError("The model returned an unsupported expression.")
+        # Keep all seven categories and their model scores.
+        scores = {
+            name: round(float(emotions.get(name, 0)), 2)
+            for name in sorted(ALLOWED_EXPRESSIONS)
+        }
 
-        # DeepFace returns emotion scores on a 0–100 scale. This is model
-        # confidence for its expression classification, not mood certainty.
-        confidence = round(float(emotions[expression]), 2)
+        expression = max(scores, key=scores.get)
 
         return {
             "expression": expression,
-            "confidence": confidence,
+            "confidence": scores[expression],
+            "scores": scores,
         }
 
     except ValueError:
         raise
     except Exception as exc:
-        raise RuntimeError("Facial-expression analysis failed. Please try again.") from exc
+        raise RuntimeError(
+            "Facial-expression analysis failed. Please try again."
+        ) from exc
     finally:
         if temp_path and os.path.exists(temp_path):
             try:
