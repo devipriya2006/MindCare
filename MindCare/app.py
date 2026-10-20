@@ -1,96 +1,117 @@
-
-import os
-from datetime import datetime, timedelta
-
-from flask import (
-    Flask, render_template, redirect, url_for,
-    request, flash, jsonify
-)
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import (
-    LoginManager, UserMixin, login_user,
-    login_required, logout_user, current_user
-)
-from werkzeug.security import (
-    generate_password_hash, check_password_hash
-)
-
-from analysis import analyze_text, MOOD_VALUES
-from face_emotion import analyze_face
-
-
-# --------------------------------------------------------------------------
-# APP / CONFIG
-# --------------------------------------------------------------------------
-
-app = Flask(__name__)
-
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY", "dev-secret-change-me"
-)
-
-database_url = os.environ.get("DATABASE_URL", "")
-
-# Configure PostgreSQL using the installed psycopg driver.
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace(
-        "postgres://", "postgresql+psycopg://", 1
-    )
-elif database_url.startswith("postgresql://"):
-    database_url = database_url.replace(
-        "postgresql://", "postgresql+psycopg://", 1
+        .order_by(MoodEntry.created_at.desc())
+        .limit(5)
+        .all()
     )
 
-database_folder = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "database"
-)
-os.makedirs(database_folder, exist_ok=True)
+    total_entries = user_entries.count()
 
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    database_url
-    or "sqlite:///" + os.path.join(database_folder, "mindcare.db")
-)
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    week_ago = datetime.utcnow() - timedelta(days=7)
 
-db = SQLAlchemy(app)
+    week_entries = MoodEntry.query.filter(
+        MoodEntry.user_id == current_user.id,
+        MoodEntry.created_at >= week_ago,
+    ).count()
 
-login_manager = LoginManager(app)
-login_manager.login_view = "login"
-login_manager.login_message_category = "info"
+    latest = recent_entries[0] if recent_entries else None
+
+    return render_template(
+        "dashboard.html",
+        recent_entries=recent_entries,
+        total_entries=total_entries,
+        week_entries=week_entries,
+        latest=latest,
+    )
 
 
 # --------------------------------------------------------------------------
-# WELLNESS SCORE CALCULATION
+# HISTORY
 # --------------------------------------------------------------------------
 
-def calculate_wellness(
-    mood, energy, sleep, stress, connection, sentiment
-):
-    mood_scores = {
-        "great": 100,
-        "good": 80,
-        "okay": 60,
-        "low": 35,
-        "angry": 35,
-        "stressed": 25,
+@app.route("/history")
+@login_required
+def history():
+    entries = (
+        MoodEntry.query
+        .filter_by(user_id=current_user.id)
+        .order_by(MoodEntry.created_at.desc())
+        .all()
+    )
+
+    return render_template("history.html", entries=entries)
+
+
+# --------------------------------------------------------------------------
+# SUPPORT / RESOURCES
+# --------------------------------------------------------------------------
+
+@app.route("/support")
+def support():
+    return render_template("support.html")
+
+
+# --------------------------------------------------------------------------
+# JSON API FOR DASHBOARD CHARTS
+# --------------------------------------------------------------------------
+
+@app.route("/api/mood-data")
+@login_required
+def mood_data():
+    entries = (
+        MoodEntry.query
+        .filter_by(user_id=current_user.id)
+        .order_by(MoodEntry.created_at.asc())
+        .limit(30)
+        .all()
+    )
+
+    trend = [
+        {
+            "date": (
+                entry.created_at.strftime("%b %d")
+                if entry.created_at else ""
+            ),
+            "score": entry.mood_score,
+            "wellness_score": entry.wellness_score,
+            "wellness_level": entry.wellness_level,
+        }
+        for entry in entries
+    ]
+
+    distribution = {
+        "Positive": 0,
+        "Neutral": 0,
+        "Negative": 0,
     }
 
-    energy_scores = {
-        "high": 100,
-        "moderate": 75,
-        "low": 45,
-        "very_low": 25,
-    }
+    for entry in entries:
+        if entry.sentiment in distribution:
+            distribution[entry.sentiment] += 1
 
-    sleep_scores = {
-        "good": 100,
-        "okay": 70,
-        "poor": 40,
-        "very_poor": 20,
+    facial_distribution = {
+        "angry": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "sad": 0,
+        "surprise": 0,
+        "neutral": 0,
     }
+    for entry in entries:
+        if entry.checkin_type == "automatic" and entry.confirmed_expression:
+            if entry.confirmed_expression in facial_distribution:
+                facial_distribution[entry.confirmed_expression] += 1
 
-    stress_scores = {
-        "low": 100,
-        "moderate": 70,
-        "high": 40,
-        "very_high": 20,
+    return jsonify({
+        "trend": trend,
+        "distribution": distribution,
+        "facial_distribution": facial_distribution,
+    })
+
+
+# --------------------------------------------------------------------------
+# RUN APP
+# --------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
