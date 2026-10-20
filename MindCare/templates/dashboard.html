@@ -1,5 +1,7 @@
+
 {% extends "base.html" %}
 {% block title %}Dashboard — MindCare{% endblock %}
+
 {% block content %}
 <section class="dashboard">
   <h2>Hello, {{ current_user.name }} 👋</h2>
@@ -17,13 +19,22 @@
       <span class="stat-value">
         {% if latest %}{{ latest.mood|capitalize }}{% else %}—{% endif %}
       </span>
-      <span class="stat-label">Latest mood</span>
+      <span class="stat-label">Latest check-in</span>
     </div>
+  </div>
+
+  <div class="dashboard-actions">
+    <a href="{{ url_for('checkin') }}">Manual Check-in</a>
+    <a href="{{ url_for('automatic_checkin') }}">Automatic Check-in</a>
+    <a href="{{ url_for('history') }}">View History</a>
   </div>
 
   {% if total_entries == 0 %}
     <p class="empty-state">
-      You haven't logged a mood yet. <a href="{{ url_for('checkin') }}">Start your first check-in</a>.
+      You haven't logged a check-in yet.
+      <a href="{{ url_for('checkin') }}">Start a manual check-in</a>
+      or
+      <a href="{{ url_for('automatic_checkin') }}">try automatic check-in</a>.
     </p>
   {% else %}
     <div class="chart-row">
@@ -31,9 +42,20 @@
         <h3>Mood Trend</h3>
         <canvas id="trendChart" height="220"></canvas>
       </div>
+
       <div class="chart-card">
         <h3>Sentiment Distribution</h3>
         <canvas id="distributionChart" height="220"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Facial Expression Distribution</h3>
+        <p>Based only on saved automatic check-ins.</p>
+        <canvas id="faceDistributionChart" height="220"></canvas>
+        <p class="history-note">
+          These are AI-estimated facial expressions, not confirmed emotional
+          states or medical assessments.
+        </p>
       </div>
     </div>
 
@@ -41,18 +63,45 @@
       <h3>Recent Check-ins</h3>
       <table>
         <thead>
-          <tr><th>Date</th><th>Mood</th><th>Emotional Signal</th></tr>
+          <tr>
+            <th>Date</th>
+            <th>Check-in Type</th>
+            <th>Mood / Expression</th>
+            <th>Emotional Signal</th>
+          </tr>
         </thead>
         <tbody>
           {% for e in recent_entries %}
           <tr>
-            <td>{{ e.created_at.strftime('%b %d, %Y') }}</td>
-            <td>{{ e.mood|capitalize }}</td>
-            <td>{{ e.emotion_signal }}</td>
+            <td>
+              {{ e.created_at.strftime('%b %d, %Y') if e.created_at else '—' }}
+            </td>
+            <td>
+              {% if e.checkin_type == 'automatic' %}
+                Automatic
+              {% else %}
+                Manual
+              {% endif %}
+            </td>
+            <td>
+              {% if e.checkin_type == 'automatic' %}
+                {{ (e.confirmed_expression or e.detected_expression or '—')|capitalize }}
+              {% else %}
+                {{ e.mood|capitalize }}
+              {% endif %}
+            </td>
+            <td>
+              {% if e.checkin_type == 'automatic' %}
+                Facial-expression estimate
+              {% else %}
+                {{ e.emotion_signal }}
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+
       <a href="{{ url_for('history') }}">View full history →</a>
     </div>
   {% endif %}
