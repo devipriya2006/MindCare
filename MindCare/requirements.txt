@@ -5,3 +5,4 @@ Werkzeug==3.0.4
 vaderSentiment==3.3.2
 gunicorn==22.0.0
 psycopg[binary]==3.2.10
+deepface
