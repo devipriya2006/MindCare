@@ -22,11 +22,13 @@
     </div>
   </div>
 
-  <div class="dashboard-actions">
-    <a href="{{ url_for('checkin') }}">Manual Check-in</a>
-    <a href="{{ url_for('automatic_checkin') }}">Automatic Check-in</a>
-    <a href="{{ url_for('history') }}">View History</a>
-  </div>
+
+<div class="dashboard-actions">
+  <a class="dashboard-btn" href="{{ url_for('checkin') }}">Manual Check-in</a>
+  <a class="dashboard-btn" href="{{ url_for('automatic_checkin') }}">Automatic Check-in</a>
+  <a class="dashboard-btn" href="{{ url_for('history') }}">View History</a>
+</div>
+
 
   {% if total_entries == 0 %}
     <p class="empty-state">
